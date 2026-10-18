@@ -78,3 +78,33 @@ jobs:
           WA_GROUP_ID: ${{ secrets.WA_GROUP_ID }}
         run: |
           python main.py
+[18/10/2026 18:20] Febri Yanto: name: Bot Berita Harian WA
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install google-generativeai requests
+
+      - name: Run Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FONNTE_TOKEN: ${{ secrets.FONNTE_TOKEN }}
+          WA_GROUP_ID: ${{ secrets.WA_GROUP_ID }}
+        run: |
+          python main.py
