@@ -2,21 +2,21 @@ import os
 import requests
 import google.generativeai as genai
 
-# 1. Ambil Kunci Rahasia dari Environment GitHub
+# Ambil kunci rahasia dari Secrets GitHub
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 FONNTE_TOKEN = os.getenv("FONNTE_TOKEN")
 GROUP_ID = os.getenv("WA_GROUP_ID")
 
 def cari_dan_rangkum_berita():
-    # Setup Gemini AI
+    # Konfigurasi Gemini
     genai.configure(api_key=GEMINI_KEY)
+    
+    # Menggunakan model gemini-1.5-flash
     model = genai.GenerativeModel('gemini-1.5-flash')
     
-    # Prompt / Instruksi untuk AI (Bisa Anda ubah topik beritanya nanti)
     prompt = (
-        "Tolong carikan dan rangkumkan 3 berita terbaru, penting, dan menarik hari ini "
-        "mengenai perkembangan teknologi dan pasar keuangan secara singkat, padat, dan jelas. "
-        "Format hasilnya menggunakan poin-poin rapi dengan emoji agar enak dibaca di WhatsApp."
+        "Tolong rangkumkan 3 berita terbaru dan penting hari ini tentang perkembangan teknologi atau keuangan secara singkat. "
+        "Gunakan bahasa Indonesia yang santai dan rapi dengan poin-poin serta emoji agar menarik dibaca di WhatsApp."
     )
     
     response = model.generate_content(prompt)
@@ -36,14 +36,11 @@ def kirim_ke_grup_wa(pesan):
     print("Respon Fonnte:", res.text)
 
 if name == "main":
-    try:
-        print("Sedang mencari dan merangkum berita via AI...")
-        isi_berita = cari_dan_rangkum_berita()
-        
-        pesan_final = f"🤖 *RANGKUMAN BERITA HARIAN*\n\n{isi_berita}\n\n_Dikirim otomatis oleh AI Bot_"
-        
-        print("Sedang mengirim ke grup WhatsApp...")
-        kirim_ke_grup_wa(pesan_final)
-        print("Selesai!")
-    except Exception as e:
-        print("Terjadi kesalahan:", e)
+    print("Sedang memproses berita dari AI...")
+    berita = cari_dan_rangkum_berita()
+    
+    pesan_final = f"🤖 *RANGKUMAN BERITA HARIAN*\n\n{berita}\n\n_Dikirim otomatis oleh AI_"
+    
+    print("Sedang mengirim ke WhatsApp...")
+    kirim_ke_grup_wa(pesan_final)
+    print("Selesai!")
