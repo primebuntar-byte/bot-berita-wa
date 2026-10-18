@@ -10,7 +10,8 @@ print("Sedang memproses berita dari AI...")
 client = genai.Client(api_key=GEMINI_KEY)
 
 prompt = (
-    "Tolong rangkumkan 3 berita terbaru dan penting hari ini tentang perkembangan teknologi atau keuangan secara singkat. "
+    "Tolong rangkumkan 3 berita terbaru dan penting hari ini tentang Perusahaan yang sedang melakukan akuisi. "
+    ". "
     "Gunakan bahasa Indonesia yang santai dan rapi dengan poin-poin serta emoji agar menarik dibaca di WhatsApp."
 )
 
