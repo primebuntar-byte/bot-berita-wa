@@ -1,22 +1,23 @@
 import os
 import requests
-import google.generativeai as genai
+from google import genai
 
-# Ambil kunci rahasia dari Secrets GitHub
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 FONNTE_TOKEN = os.getenv("FONNTE_TOKEN")
 GROUP_ID = os.getenv("WA_GROUP_ID")
 
 def cari_dan_rangkum_berita():
-    genai.configure(api_key=GEMINI_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    client = genai.Client(api_key=GEMINI_KEY)
     
     prompt = (
         "Tolong rangkumkan 3 berita terbaru dan penting hari ini tentang perkembangan teknologi atau keuangan secara singkat. "
         "Gunakan bahasa Indonesia yang santai dan rapi dengan poin-poin serta emoji agar menarik dibaca di WhatsApp."
     )
     
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
     return response.text
 
 def kirim_ke_grup_wa(pesan):
