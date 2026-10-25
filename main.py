@@ -1,143 +1,198 @@
+
 import os
 import time
+import random
 import requests
 from google import genai
+from google.genai import errors
 
-# ==============================
-# AMBIL SECRET DARI GITHUB
-# ==============================
+# =========================
+# 1. KONFIGURASI
+# =========================
 
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-
-# ==============================
-# CEK SECRET
-# ==============================
-
 if not GEMINI_KEY:
-    raise Exception("GEMINI_API_KEY belum ditemukan")
+    raise RuntimeError("Secret GEMINI_API_KEY belum diatur.")
 
 if not TELEGRAM_BOT_TOKEN:
-    raise Exception("TELEGRAM_BOT_TOKEN belum ditemukan")
+    raise RuntimeError("Secret TELEGRAM_BOT_TOKEN belum diatur.")
 
 if not TELEGRAM_CHAT_ID:
-    raise Exception("TELEGRAM_CHAT_ID belum ditemukan")
-
-
-print("Memulai bot berita...")
+    raise RuntimeError("Secret TELEGRAM_CHAT_ID belum diatur.")
 
 client = genai.Client(api_key=GEMINI_KEY)
 
+# Model dicoba secara berurutan.
+# Model berikutnya dicoba jika model sebelumnya gagal.
+MODELS = [
+    "gemini-3.8-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash",
+]
 
-# ==============================
-# PROMPT
-# ==============================
+PROMPT = """
+Buat rangkuman 3 berita terbaru tentang perusahaan
+yang melakukan atau mengumumkan akuisisi, khususnya
+perusahaan publik Indonesia dan emiten BEI.
 
-prompt = """
-Tolong rangkum 3 berita terbaru dan penting hari ini
-tentang perusahaan yang sedang melakukan akuisisi.
+Gunakan bahasa Indonesia yang jelas dan ringkas.
 
-Gunakan bahasa Indonesia yang santai, jelas, dan rapi.
+Untuk setiap berita, tuliskan:
+- Judul
+- Perusahaan yang terlibat
+- Ringkasan kejadian
+- Nilai transaksi jika tersedia
+- Tanggal berita
+- Tautan sumber jika tersedia
 
-Format:
-🔹 Judul berita
-🏢 Perusahaan:
-📌 Ringkasan:
-💰 Nilai transaksi jika tersedia:
-📰 Sumber jika tersedia:
+Jangan mengarang fakta, tanggal, nilai transaksi,
+atau tautan. Jika tidak dapat memastikan adanya
+berita aktual, katakan dengan jujur bahwa berita
+belum dapat diverifikasi.
 
-Jangan mengarang informasi.
-Jika informasi tidak tersedia, katakan tidak tersedia.
+PENTING:
+Pembuatan rangkuman ini saja tidak membuktikan
+bahwa kamu telah mencari internet. Jangan mengklaim
+berita sebagai berita terbaru jika tidak dapat
+memastikan sumber dan tanggalnya.
 """
 
+# =========================
+# 2. MINTA HASIL KE GEMINI
+# =========================
 
-# ==============================
-# GEMINI DENGAN RETRY
-# ==============================
+def buat_berita():
+    for model in MODELS:
+        print(f"\nMencoba model: {model}")
 
-print("Sedang meminta berita ke Gemini...")
+        # Maksimal 2 percobaan untuk setiap model.
+        for attempt in range(1, 3):
+            try:
+                print(
+                    f"Percobaan {attempt}/2 "
+                    f"untuk {model}"
+                )
 
-max_retries = 4
-base_delay = 5
+                response = client.models.generate_content(
+                    model=model,
+                    contents=PROMPT,
+                )
 
-berita = None
+                text = response.text
 
-for attempt in range(1, max_retries + 1):
+                if not text or not text.strip():
+                    print("Model menghasilkan teks kosong.")
+                    break
 
-    try:
+                print(f"Berhasil menggunakan {model}")
+                return text.strip()
 
-        print(f"Percobaan Gemini {attempt}/{max_retries}...")
+            except Exception as e:
+                print(
+                    f"Gagal dengan {model}: "
+                    f"{type(e).__name__}: {e}"
+                )
 
-        response = client.models.generate_content(
-            model="gemini-3.8-flash",
-            contents=prompt,
-        )
+                # Jangan mengulang error yang biasanya
+                # membutuhkan perubahan konfigurasi.
+                if isinstance(e, errors.APIError):
+                    status = getattr(e, "code", None)
 
-        berita = response.text
+                    if status not in (408, 429, 500, 502, 503, 504):
+                        print(
+                            "Error bukan gangguan sementara. "
+                            "Pindah ke model berikutnya."
+                        )
+                        break
 
-        print("Gemini berhasil memberikan berita.")
+                if attempt < 2:
+                    delay = 5 * (2 ** (attempt - 1))
+                    delay += random.uniform(0, 2)
 
-        break
+                    print(f"Tunggu {delay:.1f} detik...")
+                    time.sleep(delay)
 
-    except Exception as e:
-
-        print(f"Gemini gagal: {e}")
-
-        if attempt < max_retries:
-
-            delay = base_delay * (2 ** (attempt - 1))
-
-            print(f"Menunggu {delay} detik sebelum mencoba lagi...")
-
-            time.sleep(delay)
-
-        else:
-
-            print("Gemini gagal setelah semua percobaan.")
-
-            raise
-
-
-# ==============================
-# KIRIM KE TELEGRAM
-# ==============================
-
-print("Sedang mengirim berita ke Telegram...")
-
-url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-
-pesan = (
-    "🤖 RANGKUMAN BERITA HARIAN\n\n"
-    + berita
-    + "\n\n_Dikirim otomatis oleh AI_"
-)
-
-payload = {
-    "chat_id": TELEGRAM_CHAT_ID,
-    "text": pesan,
-    "parse_mode": "Markdown"
-}
-
-res = requests.post(
-    url,
-    json=payload,
-    timeout=30
-)
-
-print("Status Telegram:", res.status_code)
-print("Respon Telegram:", res.text)
-
-
-# ==============================
-# CEK HASIL TELEGRAM
-# ==============================
-
-if not res.ok:
-
-    raise Exception(
-        f"Gagal mengirim pesan ke Telegram: {res.text}"
+    raise RuntimeError(
+        "Semua model gagal. Berita tidak dikirim."
     )
 
-print("✅ Berita berhasil dikirim ke Telegram!")
+
+# =========================
+# 3. KIRIM KE TELEGRAM
+# =========================
+
+def kirim_telegram(berita):
+    url = (
+        "https://api.telegram.org/bot"
+        f"{TELEGRAM_BOT_TOKEN}/sendMessage"
+    )
+
+    pesan = (
+        "🤖 RANGKUMAN BERITA AKUISISI\n\n"
+        f"{berita}\n\n"
+        "Dikirim otomatis oleh Bot Berita Harian."
+    )
+
+    # Telegram membatasi pesan teks sekitar 4096 karakter.
+    # Bagi pesan panjang menjadi beberapa bagian.
+    bagian = [
+        pesan[i:i + 4000]
+        for i in range(0, len(pesan), 4000)
+    ]
+
+    for nomor, teks in enumerate(bagian, start=1):
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": teks,
+        }
+
+        try:
+            response = requests.post(
+                url,
+                json=payload,
+                timeout=30,
+            )
+            response.raise_for_status()
+
+            data = response.json()
+
+            if not data.get("ok"):
+                raise RuntimeError(
+                    f"Telegram menolak pesan: {data}"
+                )
+
+            print(
+                f"Pesan {nomor}/{len(bagian)} "
+                "berhasil dikirim."
+            )
+
+        except requests.RequestException as e:
+            raise RuntimeError(
+                f"Gagal menghubungi Telegram: {e}"
+            ) from e
+
+
+# =========================
+# 4. JALANKAN BOT
+# =========================
+
+def main():
+    print("Memulai Bot Berita Harian...")
+
+    berita = buat_berita()
+
+    print("\nBerita berhasil dibuat.")
+    print("Mengirim ke group Telegram...")
+
+    kirim_telegram(berita)
+
+    print("\nSelesai! Bot berhasil mengirim pesan.")
+
+
+if __name__ == "__main__":
+    main()
+    
