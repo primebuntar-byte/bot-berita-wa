@@ -1,3 +1,4 @@
+Python
 
 import os
 import json
@@ -10,8 +11,9 @@ import xml.etree.ElementTree as ET
 
 from pathlib import Path
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from email.utils import parsedate_to_datetime
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit, urlunsplit
 
 import requests
 from google import genai
@@ -25,8 +27,10 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 RIWAYAT_FILE = Path("berita_terkirim.json")
+ZONA_WAKTU = ZoneInfo("Asia/Jakarta")
+
 JUMLAH_BERITA = 5
-MAKS_UMUR_BERITA_HARI = 7
+MAKS_ARTIKEL_AI = 30
 
 MODELS = [
     "gemini-3.8-flash",
@@ -35,68 +39,115 @@ MODELS = [
     "gemini-2.5-flash",
 ]
 
-if not GEMINI_KEY:
-    raise RuntimeError("Secret GEMINI_API_KEY belum diatur.")
+KATEGORI_VALID = {
+    "akuisisi",
+    "merger",
+    "private placement",
+    "right issue",
+}
 
-if not TELEGRAM_BOT_TOKEN:
-    raise RuntimeError("Secret TELEGRAM_BOT_TOKEN belum diatur.")
-
-if not TELEGRAM_CHAT_ID:
-    raise RuntimeError("Secret TELEGRAM_CHAT_ID belum diatur.")
+for nama, nilai in [
+    ("GEMINI_API_KEY", GEMINI_KEY),
+    ("TELEGRAM_BOT_TOKEN", TELEGRAM_BOT_TOKEN),
+    ("TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID),
+]:
+    if not nilai:
+        raise RuntimeError(f"Secret {nama} belum diatur.")
 
 client = genai.Client(api_key=GEMINI_KEY)
+SESSION = requests.Session()
+SESSION.headers.update({"User-Agent": "Mozilla/5.0"})
+
 
 # =====================================
-# KATA KUNCI AKSI KORPORASI
+# UTILITAS
 # =====================================
 
-KATA_KUNCI = [
-    "akuisisi",
-    "pengambilalihan",
-    "merger",
-    "penggabungan usaha",
-    "private placement",
-    "PMTHMETD",
-    "right issue",
-    "rights issue",
-    "HMETD",
-    "penambahan modal dengan hak memesan efek terlebih dahulu",
-]
+def waktu_sekarang():
+    return datetime.now(timezone.utc).astimezone(ZONA_WAKTU)
+
+
+def normalisasi_teks(teks):
+    teks = (teks or "").lower()
+    teks = re.sub(r"[^a-z0-9]+", " ", teks)
+    return " ".join(teks.split())
+
+
+def normalisasi_url(url):
+    """Hilangkan parameter pelacakan yang umum."""
+    try:
+        bagian = urlsplit(url.strip())
+        host = bagian.netloc.lower()
+        path = bagian.path.rstrip("/")
+
+        if not host or not bagian.scheme.startswith("http"):
+            return url.strip()
+
+        return urlunsplit((
+            "https",
+            host,
+            path,
+            "",
+            "",
+        ))
+    except Exception:
+        return url.strip()
+
+
+def hash_teks(teks):
+    return hashlib.sha256(
+        teks.encode("utf-8")
+    ).hexdigest()
+
 
 # =====================================
-# RIWAYAT BERITA
+# RIWAYAT PERSISTEN
 # =====================================
 
 def baca_riwayat():
     if not RIWAYAT_FILE.exists():
-        return set()
+        return {
+            "urls": [],
+            "events": [],
+            "updated_at": None,
+        }
 
     try:
         data = json.loads(
             RIWAYAT_FILE.read_text(encoding="utf-8")
         )
-        return set(data.get("urls", []))
+
+        return {
+            "urls": data.get("urls", []),
+            "events": data.get("events", []),
+            "updated_at": data.get("updated_at"),
+        }
 
     except (json.JSONDecodeError, OSError) as e:
         raise RuntimeError(
-            f"Riwayat berita gagal dibaca: {e}"
+            f"Riwayat gagal dibaca: {e}"
         ) from e
 
 
-def simpan_riwayat(urls):
-    data = {
-        "urls": sorted(urls),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
+def simpan_riwayat(riwayat):
+    # Batasi ukuran riwayat agar file tidak terus membesar.
+    riwayat["urls"] = list(dict.fromkeys(riwayat["urls"]))[-5000:]
+    riwayat["events"] = list(dict.fromkeys(riwayat["events"]))[-3000:]
+    riwayat["updated_at"] = waktu_sekarang().isoformat()
 
     RIWAYAT_FILE.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2),
+        json.dumps(
+            riwayat,
+            ensure_ascii=False,
+            indent=2,
+        ),
         encoding="utf-8",
     )
 
 
 # =====================================
-# MENGAMBIL BERITA GOOGLE NEWS RSS
+# GOOGLE NEWS RSS
+# HANYA PUBLIKASI HARI INI WIB
 # =====================================
 
 def ambil_berita():
@@ -114,15 +165,12 @@ def ambil_berita():
         + "&hl=id&gl=ID&ceid=ID:id"
     )
 
-    response = requests.get(
-        rss_url,
-        timeout=30,
-        headers={"User-Agent": "Mozilla/5.0"},
-    )
+    response = SESSION.get(rss_url, timeout=30)
     response.raise_for_status()
 
     root = ET.fromstring(response.content)
-    sekarang = datetime.now(timezone.utc)
+    tanggal_hari_ini = waktu_sekarang().date()
+
     berita = []
     url_ditemukan = set()
 
@@ -135,172 +183,277 @@ def ambil_berita():
         sumber = item.findtext("source", "").strip()
         tanggal = item.findtext("pubDate", "").strip()
 
+        deskripsi_html = item.findtext("description", "")
         deskripsi = html.unescape(
-            re.sub(
-                r"<[^>]+>",
-                " ",
-                item.findtext("description", ""),
-            )
+            re.sub(r"<[^>]+>", " ", deskripsi_html)
         ).strip()
 
-        if not judul or not url:
+        if not judul or not url or not tanggal:
             continue
 
-        if url in url_ditemukan:
+        url_normal = normalisasi_url(url)
+
+        if url_normal in url_ditemukan:
             continue
 
-        url_ditemukan.add(url)
+        url_ditemukan.add(url_normal)
 
+        # Tanggal yang tidak dapat dibaca harus ditolak.
         try:
-            waktu = parsedate_to_datetime(tanggal)
+            waktu_terbit = parsedate_to_datetime(tanggal)
 
-            if waktu.tzinfo is None:
-                waktu = waktu.replace(tzinfo=timezone.utc)
+            if waktu_terbit.tzinfo is None:
+                waktu_terbit = waktu_terbit.replace(
+                    tzinfo=timezone.utc
+                )
 
-            waktu = waktu.astimezone(timezone.utc)
-            umur_hari = (
-                sekarang - waktu
-            ).total_seconds() / 86400
-
-            if umur_hari < -1 or umur_hari > MAKS_UMUR_BERITA_HARI:
-                continue
-
-            tanggal_tampil = waktu.strftime("%d-%m-%Y")
+            waktu_lokal = waktu_terbit.astimezone(
+                ZONA_WAKTU
+            )
 
         except (ValueError, TypeError, OverflowError):
-            tanggal_tampil = tanggal
+            continue
+
+        # Berita kemarin dan berita mendatang tidak diproses.
+        if waktu_lokal.date() != tanggal_hari_ini:
+            continue
 
         berita.append({
-            "id": hashlib.sha256(
-                url.encode("utf-8")
-            ).hexdigest(),
             "title": judul,
             "url": url,
+            "url_normal": url_normal,
             "source": sumber,
-            "published": tanggal_tampil,
-            "description": deskripsi[:1500],
+            "published": waktu_lokal.strftime("%d-%m-%Y %H:%M WIB"),
+            "description": deskripsi[:1200],
         })
 
     berita.sort(
-        key=lambda x: x["published"],
+        key=lambda x: datetime.strptime(
+            x["published"], "%d-%m-%Y %H:%M WIB"
+        ),
         reverse=True,
     )
 
-    print(f"Jumlah berita dari RSS: {len(berita)}")
+    print(
+        f"Berita terbit hari ini ({tanggal_hari_ini} WIB): "
+        f"{len(berita)}"
+    )
+
     return berita
 
 
 # =====================================
-# MENYARING DAN MERANGKUM DENGAN GEMINI
+# AI: PILIH, VERIFIKASI ISI, DAN RINGKAS
 # =====================================
 
 def rangkum_berita(berita):
-    data_berita = json.dumps(
+    data = json.dumps(
         berita,
         ensure_ascii=False,
         indent=2,
     )
 
     prompt = f"""
-Kamu adalah analis aksi korporasi saham Indonesia.
+Kamu adalah analis berita aksi korporasi saham Indonesia.
 
-TUGAS:
-Pilih berita yang benar-benar membahas salah satu dari
-empat kategori berikut saja:
+Pilih hanya berita relevan yang benar-benar membahas:
+1. Akuisisi
+2. Merger
+3. Private Placement
+4. Right Issue
 
-1. AKUISISI
-   Pembelian atau pengambilalihan perusahaan, saham,
-   atau aset perusahaan.
+DATA SUMBER:
+{data}
 
-2. MERGER
-   Penggabungan dua atau lebih perusahaan.
+ATURAN:
+- Gunakan hanya fakta yang tersedia pada data sumber.
+- Jangan mengarang nama perusahaan, kode saham, nilai transaksi,
+  tanggal, status, atau tautan.
+- Jangan menganggap berita yang sama sebagai peristiwa baru.
+- Prioritaskan emiten/perusahaan Indonesia.
+- Abaikan berita dividen, buyback, laporan keuangan, dan berita saham umum.
+- Ringkasan deskripsi maksimal satu kalimat, sederhana dan singkat.
+- Bedakan rencana, rumor, persetujuan, dan transaksi selesai.
+- Jika masih berupa rumor, status harus "Belum terkonfirmasi".
+- Jangan mengklaim sudah dikonfirmasi IDX jika tidak ada bukti di sumber.
+- Gunakan URL asli dari data yang diberikan.
+- Maksimal {JUMLAH_BERITA} peristiwa.
+- event_key harus stabil dan spesifik untuk peristiwa yang sama.
+  Format contoh: "VIVA|akuisisi|PT B".
+  Jangan masukkan kata-kata yang berubah hanya karena perbedaan judul.
+- Jika ada perkembangan material baru dari peristiwa lama,
+  jelaskan perkembangan itu secara singkat.
+- Jika tidak ada berita relevan, kembalikan articles sebagai [].
 
-3. PRIVATE PLACEMENT
-   Penerbitan saham baru tanpa HMETD, termasuk PMTHMETD.
+Kembalikan JSON saja dengan format:
+{{
+  "articles": [
+    {{
+      "company": "Nama perusahaan sesuai sumber",
+      "category": "Akuisisi",
+      "description": "Ringkasan satu kalimat.",
+      "date": "26-10-2026",
+      "status": "Rencana",
+      "source": "Nama sumber",
+      "url": "URL asli dari data",
+      "event_key": "PERUSAHAAN|kategori|peristiwa spesifik",
+      "material_update": false
+    }}
+  ]
+}}
 
-4. RIGHT ISSUE
-   Penerbitan saham baru dengan HMETD.
+category harus salah satu dari:
+Akuisisi, Merger, Private Placement, Right Issue.
 
-ATURAN WAJIB:
-- Jangan memasukkan berita di luar empat kategori tersebut.
-- Jangan memasukkan dividen, buyback, pergantian direksi,
-  laporan keuangan, atau berita saham umum.
-- Prioritaskan perusahaan publik Indonesia dan emiten BEI.
-- Jangan mengarang fakta, tanggal, kode saham, nilai transaksi,
-  status transaksi, sumber, atau tautan.
-- Gunakan hanya informasi dari data berita yang diberikan.
-- Bedakan rumor, rencana, persetujuan, dan transaksi selesai.
-- Jika hanya rumor, beri label BELUM TERKONFIRMASI.
-- Jangan mengklaim berita telah dikonfirmasi IDX jika datanya
-  tidak menunjukkan bukti pengumuman resmi.
-- Maksimal {JUMLAH_BERITA} berita.
-- Jangan mengulang berita yang sama dengan judul berbeda.
-- Pertahankan tautan asli yang diberikan.
-
-FORMAT SETIAP BERITA:
-
-📌 [KATEGORI AKSI KORPORASI]
-🏢 Emiten/perusahaan:
-📰 Judul:
-📝 Ringkasan:
-💰 Nilai transaksi: (jika tersedia)
-📅 Tanggal:
-🔎 Status: (rumor/rencana/disetujui/selesai/tidak diketahui)
-🗞️ Sumber:
-🔗 Tautan:
-
-Pisahkan setiap berita dengan garis pemisah.
-
-Jika tidak ada berita yang memenuhi kriteria, balas tepat:
-TIDAK_ADA_BERITA_RELEVAN
-
-DATA BERITA:
-{data_berita}
+material_update hanya true jika sumber secara jelas menunjukkan
+perkembangan baru yang material, bukan sekadar judul berbeda.
 """
 
     for model in MODELS:
-        for percobaan in range(1, 3):
+        for percobaan in range(2):
             try:
-                print(
-                    f"Mencoba model {model}, "
-                    f"percobaan {percobaan}/2"
-                )
+                print(f"Mencoba Gemini: {model}")
 
                 hasil = client.models.generate_content(
                     model=model,
                     contents=prompt,
+                    config={
+                        "response_mime_type": "application/json"
+                    },
                 )
 
                 teks = hasil.text
 
-                if teks and teks.strip():
-                    print(f"Berhasil menggunakan {model}")
-                    return teks.strip()
+                if not teks:
+                    continue
 
-                break
+                data_hasil = json.loads(teks)
+                artikel_ai = data_hasil.get("articles", [])
+
+                if not isinstance(artikel_ai, list):
+                    raise ValueError("Format articles tidak valid.")
+
+                # Validasi agar AI tidak membuat tautan sendiri.
+                sumber_valid = {
+                    normalisasi_url(b["url"]): b
+                    for b in berita
+                }
+
+                artikel_valid = []
+
+                for artikel in artikel_ai:
+                    if not isinstance(artikel, dict):
+                        continue
+
+                    url = artikel.get("url", "")
+                    url_normal = normalisasi_url(url)
+                    sumber = sumber_valid.get(url_normal)
+
+                    if not sumber:
+                        continue
+
+                    kategori = normalisasi_teks(
+                        artikel.get("category", "")
+                    )
+
+                    if kategori not in KATEGORI_VALID:
+                        continue
+
+                    perusahaan = str(
+                        artikel.get("company", "")
+                    ).strip()
+
+                    deskripsi = str(
+                        artikel.get("description", "")
+                    ).strip()
+
+                    event_key = str(
+                        artikel.get("event_key", "")
+                    ).strip()
+
+                    if not perusahaan or not deskripsi or not event_key:
+                        continue
+
+                    artikel["url"] = sumber["url"]
+                    artikel["source"] = sumber["source"]
+                    artikel["published"] = sumber["published"]
+                    artikel["category"] = {
+                        "akuisisi": "Akuisisi",
+                        "merger": "Merger",
+                        "private placement": "Private Placement",
+                        "right issue": "Right Issue",
+                    }[kategori]
+
+                    artikel["company"] = perusahaan
+                    artikel["description"] = deskripsi
+                    artikel["status"] = str(
+                        artikel.get("status", "Tidak diketahui")
+                    ).strip()
+                    artikel["event_key"] = normalisasi_teks(
+                        event_key
+                    )
+                    artikel["material_update"] = (
+                        artikel.get("material_update") is True
+                    )
+
+                    artikel_valid.append(artikel)
+
+                print(f"Gemini berhasil: {model}")
+                return artikel_valid
 
             except Exception as e:
                 print(
-                    f"Model {model} gagal: "
-                    f"{type(e).__name__}: {e}"
+                    f"{model} gagal: {type(e).__name__}: {e}"
                 )
 
-                if percobaan < 2:
-                    jeda = (
-                        5 * (2 ** (percobaan - 1))
-                        + random.uniform(0, 2)
+                if percobaan == 0:
+                    time.sleep(
+                        3 + random.uniform(0, 2)
                     )
-                    print(f"Mencoba lagi dalam {jeda:.1f} detik")
-                    time.sleep(jeda)
 
     raise RuntimeError(
-        "Semua model Gemini gagal. Tidak ada berita dikirim."
+        "Semua model Gemini gagal. Riwayat tidak akan diubah."
     )
 
 
 # =====================================
-# KIRIM PESAN KE TELEGRAM
+# FORMAT TELEGRAM
 # =====================================
+
+def format_pesan(artikel):
+    baris = [
+        "📊 <b>PEMANTAU AKSI KORPORASI</b>",
+        f"📅 {waktu_sekarang().strftime('%d-%m-%Y')} WIB",
+        "",
+    ]
+
+    for nomor, item in enumerate(artikel, start=1):
+        perusahaan = html.escape(item["company"])
+        kategori = html.escape(item["category"])
+        deskripsi = html.escape(item["description"])
+        status = html.escape(item["status"])
+        tanggal = html.escape(item["published"])
+        sumber = html.escape(item["source"] or "Tidak diketahui")
+        url = html.escape(item["url"], quote=True)
+
+        baris.extend([
+            f"<b>{nomor}. {perusahaan}</b>",
+            f"Corporate Action: {kategori}",
+            f"Deskripsi: {deskripsi}",
+            f"Status: {status}",
+            f"Tanggal: {tanggal}",
+            f"Sumber: {sumber}",
+            f'🔗 <a href="{url}">Baca berita</a>',
+            "",
+        ])
+
+    baris.append(
+        "⚠️ Periksa keterbukaan informasi resmi IDX/BEI "
+        "sebelum mengambil keputusan investasi."
+    )
+
+    return "\n".join(baris)
+
 
 def kirim_telegram(pesan):
     url = (
@@ -308,42 +461,45 @@ def kirim_telegram(pesan):
         f"{TELEGRAM_BOT_TOKEN}/sendMessage"
     )
 
-    potongan = []
-
-    while len(pesan) > 3800:
-        posisi = pesan.rfind("\n", 0, 3800)
-
-        if posisi < 500:
-            posisi = 3800
-
-        potongan.append(pesan[:posisi])
-        pesan = pesan[posisi:].lstrip()
-
-    if pesan:
-        potongan.append(pesan)
-
-    for nomor, bagian in enumerate(potongan, start=1):
-        response = requests.post(
-            url,
-            json={
-                "chat_id": TELEGRAM_CHAT_ID,
-                "text": bagian,
-                "disable_web_page_preview": True,
-            },
-            timeout=30,
+    # Format sederhana: satu pesan maksimal sekitar 3800 karakter.
+    # Jika panjang, potong hanya di batas berita bila memungkinkan.
+    if len(pesan) > 3800:
+        raise RuntimeError(
+            "Pesan terlalu panjang. Kurangi jumlah berita."
         )
 
-        response.raise_for_status()
-        hasil = response.json()
+    response = SESSION.post(
+        url,
+        json={
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": pesan,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        },
+        timeout=30,
+    )
 
-        if not hasil.get("ok"):
-            raise RuntimeError(
-                f"Telegram menolak pesan: {hasil}"
-            )
+    response.raise_for_status()
+    hasil = response.json()
 
-        print(
-            f"Pesan Telegram {nomor}/{len(potongan)} terkirim."
+    if not hasil.get("ok"):
+        raise RuntimeError(
+            f"Telegram menolak pesan: {hasil}"
         )
+
+    print("Pesan Telegram berhasil dikirim.")
+
+
+def kirim_tidak_ada_berita():
+    tanggal = waktu_sekarang().strftime("%d-%m-%Y")
+
+    pesan = (
+        "📊 <b>PEMANTAU AKSI KORPORASI</b>\n"
+        f"📅 {tanggal} WIB\n\n"
+        "Tidak ada berita aksi korporasi baru yang relevan hari ini."
+    )
+
+    kirim_telegram(pesan)
 
 
 # =====================================
@@ -351,63 +507,67 @@ def kirim_telegram(pesan):
 # =====================================
 
 def main():
-    print("====================================")
+    print("=" * 40)
     print("BOT PEMANTAU AKSI KORPORASI")
-    print("Akuisisi | Merger | Private Placement | Right Issue")
-    print("====================================")
+    print("Zona waktu: Asia/Jakarta")
+    print("=" * 40)
 
     riwayat = baca_riwayat()
-    semua_berita = ambil_berita()
+    berita = ambil_berita()
 
-    if not semua_berita:
-        print("Tidak ada berita dari RSS.")
+    # Jangan mengirim berita yang URL-nya pernah diperiksa.
+    urls_lama = set(riwayat["urls"])
+    calon = [
+        b for b in berita
+        if b["url_normal"] not in urls_lama
+    ][:MAKS_ARTIKEL_AI]
+
+    print(f"Artikel baru untuk diperiksa AI: {len(calon)}")
+
+    if not calon:
+        kirim_tidak_ada_berita()
         return
 
-    baru = [
-        berita for berita in semua_berita
-        if berita["url"] not in riwayat
-    ]
+    # Jika Gemini gagal, hentikan program dan jangan menyimpan
+    # URL sebagai sudah diperiksa. Artikel dapat dicoba lagi nanti.
+    artikel_ai = rangkum_berita(calon)
 
-    if not baru:
-        print("Tidak ada berita baru. Tidak mengirim pesan.")
-        return
+    events_lama = set(riwayat["events"])
+    artikel_baru = []
 
-    # Batasi jumlah artikel yang dikirim ke Gemini.
-    calon = baru[:20]
+    for item in artikel_ai:
+        event_key = item["event_key"]
 
-    print(
-        f"Ada {len(baru)} URL berita baru; "
-        f"{len(calon)} akan disaring."
+        if event_key in events_lama:
+            # Kirim ulang hanya jika benar-benar ada perkembangan
+            # material yang dinyatakan oleh sumber dan AI.
+            if not item["material_update"]:
+                continue
+
+        artikel_baru.append(item)
+
+    artikel_baru = artikel_baru[:JUMLAH_BERITA]
+
+    if artikel_baru:
+        kirim_telegram(format_pesan(artikel_baru))
+
+        for item in artikel_baru:
+            riwayat["events"].append(item["event_key"])
+
+    else:
+        kirim_tidak_ada_berita()
+
+    # Tandai artikel yang telah diperiksa setelah pengiriman
+    # Telegram berhasil. Artikel tidak relevan tidak diperiksa
+    # terus-menerus setiap jam.
+    riwayat["urls"].extend(
+        b["url_normal"] for b in calon
     )
 
-    rangkuman = rangkum_berita(calon)
-
-    if "TIDAK_ADA_BERITA_RELEVAN" in rangkuman:
-        print("Tidak ada berita relevan dari empat kategori.")
-        return
-
-    pesan = (
-        "📊 PEMANTAU AKSI KORPORASI SAHAM INDONESIA\n\n"
-        "Kategori: Akuisisi | Merger | Private Placement | Right Issue\n"
-        f"Waktu pemeriksaan: "
-        f"{datetime.now(timezone.utc).strftime('%d-%m-%Y %H:%M UTC')}\n\n"
-        f"{rangkuman}\n\n"
-        "⚠️ Sumber awal: Google News RSS. "
-        "Periksa keterbukaan informasi resmi IDX/BEI dan "
-        "pengumuman emiten sebelum mengambil keputusan investasi."
-    )
-
-    kirim_telegram(pesan)
-
-    # Simpan URL yang diperiksa setelah pengiriman berhasil,
-    # agar artikel yang sama tidak diproses berulang kali.
-    riwayat.update(
-        berita["url"] for berita in calon
-    )
     simpan_riwayat(riwayat)
 
-    print("Riwayat berita berhasil diperbarui.")
-    print("Bot selesai dijalankan.")
+    print("Riwayat berhasil diperbarui.")
+    print("Bot selesai.")
 
 
 if __name__ == "__main__":
