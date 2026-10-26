@@ -418,11 +418,12 @@ perkembangan baru yang material, bukan sekadar judul berbeda.
 # =====================================
 # FORMAT TELEGRAM
 # =====================================
-
 def format_pesan(artikel):
+    tanggal_hari_ini = waktu_sekarang().strftime("%d-%m-%Y")
+
     baris = [
-        "📊 <b>PEMANTAU AKSI KORPORASI</b>",
-        f"📅 {waktu_sekarang().strftime('%d-%m-%Y')} WIB",
+        "📊 <b>INFO BERITA TERBARU A1</b>",
+        f"📅 {tanggal_hari_ini} WIB",
         "",
     ]
 
@@ -437,12 +438,21 @@ def format_pesan(artikel):
 
         baris.extend([
             f"<b>{nomor}. {perusahaan}</b>",
-            f"Corporate Action: {kategori}",
-            f"Deskripsi: {deskripsi}",
-            f"Status: {status}",
-            f"Tanggal: {tanggal}",
-            f"Sumber: {sumber}",
+            "",
+            "<b>Corporate Action:</b>",
+            f"         {kategori}",
+            "",
+            "<b>Deskripsi:</b>",
+            f"         {deskripsi}",
+            "",
+            f"<b>Status:</b> {status}",
+            f"<b>Tanggal:</b> {tanggal}",
+            "",
             f'🔗 <a href="{url}">Baca berita</a>',
+            "",
+            f"<b>Sumber:</b> {sumber}",
+            "",
+            "━━━━━━━━━━━━━━━━━━",
             "",
         ])
 
@@ -452,55 +462,6 @@ def format_pesan(artikel):
     )
 
     return "\n".join(baris)
-
-
-def kirim_telegram(pesan):
-    url = (
-        f"https://api.telegram.org/bot"
-        f"{TELEGRAM_BOT_TOKEN}/sendMessage"
-    )
-
-    # Format sederhana: satu pesan maksimal sekitar 3800 karakter.
-    # Jika panjang, potong hanya di batas berita bila memungkinkan.
-    if len(pesan) > 3800:
-        raise RuntimeError(
-            "Pesan terlalu panjang. Kurangi jumlah berita."
-        )
-
-    response = SESSION.post(
-        url,
-        json={
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": pesan,
-            "parse_mode": "HTML",
-            "disable_web_page_preview": True,
-        },
-        timeout=30,
-    )
-
-    response.raise_for_status()
-    hasil = response.json()
-
-    if not hasil.get("ok"):
-        raise RuntimeError(
-            f"Telegram menolak pesan: {hasil}"
-        )
-
-    print("Pesan Telegram berhasil dikirim.")
-
-
-def kirim_tidak_ada_berita():
-    tanggal = waktu_sekarang().strftime("%d-%m-%Y")
-
-    pesan = (
-        "📊 <b>PEMANTAU AKSI KORPORASI</b>\n"
-        f"📅 {tanggal} WIB\n\n"
-        "Tidak ada berita aksi korporasi baru yang relevan hari ini."
-    )
-
-    kirim_telegram(pesan)
-
-
 # =====================================
 # PROSES UTAMA
 # =====================================
