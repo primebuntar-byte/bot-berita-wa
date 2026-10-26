@@ -54,7 +54,11 @@
     "https://news.google.com/rss/articles/CBMivgFBVV95cUxOWlZKOEFHVU9RLV9SLU15QklQZlhYLXlQejNSM2xQWkhKVUUzdmcxaFpyMnhZbGd0b3hmbV85RnlNNmlKbWo2MEE2LW9OcVlwTExQUllqMko4bmNMXzFhSm5Wc01VakZuVDRZeElzVWpkY2FWVHVXenZ6ZWJDZi1vNm5Xc0x2d0NNTDZhUHpGVVoxTVAyYnRMRDVpYXFaUEV1X0dpdFQyRlNCQkJSbXRGOGhZOVQ0UUFudG56OUd3",
     "https://news.google.com/rss/articles/CBMiigFBVV95cUxOaDhlZFVLbU8wc3ZaSEdiTWJPbkY2Nl9vOHZnY0VhVUZFQldoeWZmQmZOV2M2MG44cEJaQVRsa25CQmdvMW84Rl9LZ1NYalp0UlQ5UDBId2k5clJIRldmVEpSX1F6UkczMjBuMk5jTlpJMWNTWU1FZUN6d05SVWpBQXRWVGp5dnQ1SFE",
     "https://news.google.com/rss/articles/CBMieEFVX3lxTE04TU1pdDN4eHozcC1obG93eWpQNnlNY3piZXJSR0l0UzFUWEpTdkEwUGtzdnBQLUlyNFcyb0NrQXNoRE5xc0pwWVJuOXVENEtOTlZnOFZSTVJ4QXRpVjZhb0dNM1JWS0lTN3U0U3hLMDc2VnBPX3JJNA",
-    "https://news.google.com/rss/articles/CBMiqgFBVV95cUxOYkN0TjJwWl9XTGtSYVFSVWZ5dEpDeFJIdy14YUZHeGVpZ3NDUEkweFd5Ti1VU2ozSG1sNmJxSkFmQ2gxcFhwSEFHdjJ5dVpUVkJMdTFmRFVpZFZBanAyaFZRQjRfRVJ2Ukt0VnVfLXJEVjdsM3pwNmUtMjZHbGZXZFJCbjRCTi1RVDVyX3ktTmI3ZGc5QWFnRGNXY1lGNURKQWp6ZHZfWGZ5dw"
+    "https://news.google.com/rss/articles/CBMiqgFBVV95cUxOYkN0TjJwWl9XTGtSYVFSVWZ5dEpDeFJIdy14YUZHeGVpZ3NDUEkweFd5Ti1VU2ozSG1sNmJxSkFmQ2gxcFhwSEFHdjJ5dVpUVkJMdTFmRFVpZFZBanAyaFZRQjRfRVJ2Ukt0VnVfLXJEVjdsM3pwNmUtMjZHbGZXZFJCbjRCTi1RVDVyX3ktTmI3ZGc5QWFnRGNXY1lGNURKQWp6ZHZfWGZ5dw",
+    "https://news.google.com/rss/articles/CBMitgFBVV95cUxOcGxOVERfZU0tNGtTeVVxaVg5YU5DaG9Zckc5U3VNcmo5eVQ1bU9xYkFMcGVTUjF4dUNhNWwwUkhpX09PMXAySFhneHpVWEdzcngyN3NfcklMOWZnal84SlA4b3g1ZVowWkJxcGpHTHEzRDlwN1U1dGoyanRrUGZIYllpTzQzMHdZQ2FvUlZDQ05aRDB4VkdleWdxT3FFX0tVUXhFOXNvUG5WQW5qNjhsMVZ0NXBRUQ",
+    "https://news.google.com/rss/articles/CBMixwFBVV95cUxQTS1lZThpVkJWaHMtUnZlSk5MX1BkYlEtOWV4RDF1cFVCU05zWElxNVJadkQyakpKNDRTS2lwSktmd1VZNEtBeGEwN3VRU1JuRG9GQ05sRTRERkhGdVFHOWxpZVBIMTg2SEI3Uy1DNWs5eXRSU1VseGhJZ05ic0ZNUUl0UHZUZ0o3bm5lRktXYnNyU1hWUGpyWWZ2N3JUOUNnU0syaEt4VHNaRkhkYnVzTUlNdnN3MTFtTWZNa05VN3dNc19BMGFZ",
+    "https://news.google.com/rss/articles/CBMiogFBVV95cUxPVmFBY0Jtb2pmUkNnNXd6OEJkcXdnSGxqaVpMenBtNFU0U1RrRWdYaG5DNy0yTFpwM3h6TXdYNWhQZmYwZmdCaVU0dUM0QUR0Y0taRHhIVzgzS0IxNHo1U1VrMWdHQWJ4SEZNREVtYmRuM3VMTEd3TW1QTmNBODlhN29xaFh3eGxhYV9sZFN0ZnBLQ2Y3OE5pUnVpb3JTYzVNUVE",
+    "https://news.google.com/rss/articles/CBMiywFBVV95cUxOLVplUmd2cGdBTnk2bV9PbHFwNzZQeGNjalAtNVJEdXpTTVIwd1hzam5ZN0dCQlBPYzRia0YtWEdWUnNqazIzcnhIOTVHMUVzcDdoYmRFT2RzZFhoYk96bXU3UUlSX0tQWUkwb1JMUVBqWTBabG84WURJQzBqd2JlWWFfYWM0Q1JzSzRXakI2WnN2OHIzZkpLQlMwcGY4UFV1VzRyM3FyU3NKOTNGU1djMTBBQW0tcS1UaHRkNElsQkNpWnhWeDRDdXpHWQ"
   ],
   "events": [
     "emiten voucher digital private placement 200 juta helai",
@@ -72,7 +76,8 @@
     "bumn asuransi merger konsolidasi akhir 2026",
     "garuda indonesia merger pelita air",
     "bumi resources akuisisi mount margaret",
-    "pln merger dua anak usaha"
+    "pln merger dua anak usaha",
+    "garuda indonesia pelita air merger penundaan restrukturisasi"
   ],
-  "updated_at": "2026-10-26T16:36:36.516140+07:00"
+  "updated_at": "2026-10-26T17:28:56.950021+07:00"
 }
