@@ -1,4 +1,3 @@
-
 import os
 import json
 import time
@@ -651,19 +650,6 @@ def kirim_telegram(pesan):
     print("Pesan Telegram berhasil dikirim.")
 
 
-def kirim_tidak_ada_berita():
-    tanggal = waktu_sekarang().strftime("%d-%m-%Y")
-
-    pesan = (
-        "📊 <b>INFO BERITA TERBARU A1</b>\n"
-        f"📅 {tanggal} WIB\n\n"
-        "Tidak ada berita aksi korporasi baru "
-        "yang relevan hari ini."
-    )
-
-    kirim_telegram(pesan)
-
-
 # =====================================
 # PROSES UTAMA
 # =====================================
@@ -685,8 +671,10 @@ def main():
     ]
 
     if not calon:
-        print("Tidak ada URL baru untuk diperiksa.")
-        kirim_tidak_ada_berita()
+        print(
+            "Tidak ada URL baru untuk diperiksa. "
+            "Tidak ada pesan dikirim."
+        )
         return
 
     # Gabungkan artikel yang sangat mirip sebelum AI.
@@ -733,10 +721,13 @@ def main():
                 item["event_key"]
             )
     else:
-        kirim_tidak_ada_berita()
+        print(
+            "Tidak ada berita relevan. "
+            "Tidak ada pesan dikirim."
+        )
 
     # Tandai semua artikel dalam batch sebagai sudah diperiksa.
-    # Simpan hanya setelah pengiriman berhasil.
+    # Simpan hanya setelah proses berhasil.
     for item in berita:
         if item["url_normal"] not in urls_lama:
             riwayat["urls"].append(
