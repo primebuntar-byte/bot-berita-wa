@@ -736,7 +736,12 @@
     "https://news.google.com/rss/articles/CBMimAFBVV95cUxQbkNFMGtyZlAyVkxPMmlsTTkzTlNqczdFbndjX1NjV1hqZ2JzQy02M3pteWVhb1gtOUJsRjNQRVVHSXYxbXFFbl9ydmprZ2M2Nkk5SlJFNTNoX3JjTUFEN1VybkFoSjg4QldmcFdMX3NhVG4xLUdpcFZPMUFlaVEwS0ZXWnZqNkt0ZlpzRW1YLVdraWh6UWM1Xw",
     "https://news.google.com/rss/articles/CBMilAFBVV95cUxOcXBsV2FGSlZFMTBaVnhMUWtFTlMtV0RjbjBWYTRuOVhTUGY2UHFhNXJ5a1YwZGZnNkNfZ1l6cDhCbkxHQkkxc0E3Qnp6cDhYRWZoVzJMeDhEcWtPSGJyeVF2eFRWYkV6ZlFiVkc1RlgwOHExUVV5T285Zkx4Rm1CRllCWmN0RVZuMUk0bUN1Yzc0U3pf",
     "https://news.google.com/rss/articles/CBMingFBVV95cUxPdk5TR3BOZHA0T3F0RGhXU1pWYkM5Q0xwZE9DaGFvUHlCRXJXcW8wY1h0c0Nhc3hBc3ptM3hfUnJTRzVJX1dJRVB3N2RpS3ZkZENMc0JnMFQ5aUR6VjZhSlEwTlRNRjhPNWpubmx1WjJySW1PbW5vMGJna29Sb3VzT0dab1gyQ2dqeVUwZHB5SDh4eWZtWS01b1V2UnNKZw",
-    "https://news.google.com/rss/articles/CBMimwFBVV95cUxPRTZ4bG04ZGJuXzhwTlN0X0w1RFFoYzRZWmQ4RExucEZnMW40MV9Ba0c3eXFiSTdlQzUxV09GemR6Rm4zYnhsb25TRndLU0ZpSWtidDNFRkZRZlNhckgzeDFIVzdUSWNHTVRLVVpiaGJER1l6MkRUQmgybGVfaEJCR1YyUGdKdmRZcXlHb2VJQUtkVGVYUk1aZmowdw"
+    "https://news.google.com/rss/articles/CBMimwFBVV95cUxPRTZ4bG04ZGJuXzhwTlN0X0w1RFFoYzRZWmQ4RExucEZnMW40MV9Ba0c3eXFiSTdlQzUxV09GemR6Rm4zYnhsb25TRndLU0ZpSWtidDNFRkZRZlNhckgzeDFIVzdUSWNHTVRLVVpiaGJER1l6MkRUQmgybGVfaEJCR1YyUGdKdmRZcXlHb2VJQUtkVGVYUk1aZmowdw",
+    "https://news.google.com/rss/articles/CBMid0FVX3lxTE1lWHk0cFRmbC1nR3E0NUdtSmp5a253N3h6Q3hGUG1yLWN4Z1VyZW13RUNxTERzdU1hVWtRd3J4V1hlbWNMaUM5WXNXQkdWTUZnbTV0NG9mUllHcFd3WWhsaldxWnJlM2gtLW00MTZodjVxM0I3U2NJ",
+    "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE5CbXJwZFZoeWlQWGl2aEswX2tLVVBWdy01WlNaQ3NtN1JWdnhDY0ItVEFZVzBZZlBzbEdDR3ZNSzdaQWVkTExLTVE0R0FXZ19RU0NCaG1WbjZBMnl2SWlpRGJibHY3d1E",
+    "https://news.google.com/rss/articles/CBMirwFBVV95cUxPblRwTG9UZDNiMjBMNlZtT0RBcWQtZHB0Y0dFWHJBNEJBS3c1NFVoOGh0Tk92TEtsdG54SkNLa3QwWE1JQkNjR0tBQUNfR0k2RS1IWmxzamR6UmNBdnMwMVE0SVhFQVZOUFBEYVQ0bFdDUmF1UzRRQWlmLS1pbVpWRk5ObU5UTWsxUHNhTHBWRUNBS2tMQkVMZUpMeUo2Y3lmSTVTeG5CVjVYX1Q2dkhJ0gG0AUFVX3lxTE85TGNvcXUxUF9oN3UwS1RXNHpjbVVLTTVNS085NnAwaEo5ZkNlZWVPajVTU2dTZDBaWktZalEwNzV1V290WnVwU1NUUllkZDlMUU9SRFFJTDBkOVZ6RnFVR2szMlZRb1dnR3pFMjRjWEdYQVhRWWtqc2FRSDhGNTBVeFB6UUlvYUdZRXljR2V2TDBidGNQMDVua3BaNWY1VkJhUEM3NlF4d1dpOXdCbkZvYjRkLQ",
+    "https://news.google.com/rss/articles/CBMiuAFBVV95cUxNaTI0TEJXaURicTdCcUw1VVU0YmItZzE0VDJSNGRmaFJOdVZCeEdlQ0daTU9kdGpQb0tqZm1JVzU1MjBwSGV4VUd4V3AxeFN6ejJQdWJRRThZX05hNW5wMEdGQXJLSFJZODZJLXpmVjNKXzVzQkFBWUp2SktaakhzVFJEQWpzSEdoVXMzSmRqYnZlRERTeFBaQzd5T3prRFhQc0RKVVVaRXJLUXFpQmVnbG1MSmJPUGRo",
+    "https://news.google.com/rss/articles/CBMihgFBVV95cUxNRWttRGpHV0wwb3dfaXhiZE5aSC03M1BSenBKOGFLNkxYWjU2LWR5MEJjeDdJVWM2TnNEVXk3NTNZYU95ZXF4dTNBVEJaYUxTX1pGNjZ4YXVrZENHU1NlbkJWdmpNeHhhWmhFQWIwZlVNbjlkSjVVYU1Ed2lyMmVCMXNxc0tKZw"
   ],
   "events": [
     "emiten voucher digital private placement 200 juta helai",
@@ -1029,7 +1034,9 @@
     "ultj right issue akuisisi frisian flag 16 94 triliun",
     "novagold akuisisi donlin gold",
     "oura akuisisi counsel health",
-    "nvro metals akuisisi northern territories resources"
+    "nvro metals akuisisi northern territories resources",
+    "cbre right issue konversi utang 48 miliar saham",
+    "ultj right issue rights issue jumbo"
   ],
-  "updated_at": "2026-11-11T06:23:54.313226+07:00"
+  "updated_at": "2026-11-11T07:29:04.979728+07:00"
 }
